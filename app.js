@@ -1,6 +1,7 @@
 // Referencias
-const container = document.getElementById("mainContainer"); // Ojo: Cambié el ID en HTML a mainContainer
+const container = document.getElementById("mainContainer");
 const searchInput = document.getElementById("searchInput");
+const editionFilter = document.getElementById("editionFilter"); // <--- Nuevo
 const typeFilter = document.getElementById("typeFilter");
 const costFilter = document.getElementById("costFilter");
 
@@ -18,9 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     allCards = rawData.map((card, index) => {
       let edicion = "Otras";
       
-      // Lógica de extracción de carpeta
       if (card.imagen) {
-        // Busca texto entre "PRIMER_BLOQUE/" y el siguiente "/"
+        // Regex para sacar la carpeta de la URL
         const match = card.imagen.match(/PRIMER_BLOQUE\/([^\/]+)\//);
         if (match && match[1]) {
           // Limpieza: "03-Helenica" -> "Helenica"
@@ -36,6 +36,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
     });
 
+    // Llenar el select de ediciones antes de renderizar
+    populateEditions();
+    
+    // Render inicial
     renderGroupedCards(allCards);
 
   } catch (error) {
@@ -48,7 +52,19 @@ function capitalizar(str) {
   return str.replace(/\b\w/g, l => l.toUpperCase());
 }
 
-// 2. RENDERIZAR AGRUPADO
+// 2. FUNCIÓN PARA LLENAR EL FILTRO DE EDICIONES
+function populateEditions() {
+  const edicionesUnicas = [...new Set(allCards.map(c => c.edicionCalculada))].sort();
+  
+  edicionesUnicas.forEach(ed => {
+    const option = document.createElement("option");
+    option.value = ed;
+    option.textContent = ed;
+    editionFilter.appendChild(option);
+  });
+}
+
+// 3. RENDERIZAR AGRUPADO
 function renderGroupedCards(cards) {
   container.innerHTML = "";
 
@@ -57,7 +73,7 @@ function renderGroupedCards(cards) {
     return;
   }
 
-  // A. Agrupar cartas por edición
+  // Agrupar
   const grupos = {};
   cards.forEach(card => {
     const ed = card.edicionCalculada;
@@ -65,18 +81,16 @@ function renderGroupedCards(cards) {
     grupos[ed].push(card);
   });
 
-  // B. Ordenar nombres de ediciones (opcional)
+  // Ordenar grupos alfabéticamente
   const nombresEdiciones = Object.keys(grupos).sort();
 
-  // C. Crear secciones HTML
+  // Crear secciones
   nombresEdiciones.forEach(nombreEdicion => {
     const cartasGrupo = grupos[nombreEdicion];
 
-    // Contenedor de la Sección
     const section = document.createElement("section");
     section.className = "edition-section";
 
-    // Título de la Edición
     section.innerHTML = `
       <div class="edition-title">
         ${nombreEdicion}
@@ -84,7 +98,6 @@ function renderGroupedCards(cards) {
       </div>
     `;
 
-    // Grilla de cartas
     const grid = document.createElement("div");
     grid.className = "cards-grid";
 
@@ -104,9 +117,10 @@ function renderGroupedCards(cards) {
   });
 }
 
-// 3. FILTROS
+// 4. FILTROS (Ahora incluye Edición)
 function applyFilters() {
   const text = searchInput.value.toLowerCase();
+  const edition = editionFilter.value; // <--- Leemos el valor
   const type = typeFilter.value;
   const cost = costFilter.value;
 
@@ -117,8 +131,13 @@ function applyFilters() {
     
     // Filtro Texto
     const matchText = nombre.includes(text) || habilidad.includes(text);
+    
+    // Filtro Edición (NUEVO)
+    const matchEdition = edition === "all" || card.edicionCalculada === edition;
+
     // Filtro Tipo
     const matchType = type === "all" || tipoCarta.includes(type.toLowerCase());
+    
     // Filtro Coste
     let matchCost = true;
     const coste = card.coste !== undefined ? card.coste : -1;
@@ -127,7 +146,7 @@ function applyFilters() {
       else matchCost = coste == cost;
     }
 
-    return matchText && matchType && matchCost;
+    return matchText && matchEdition && matchType && matchCost;
   });
 
   renderGroupedCards(filtered);
@@ -135,5 +154,6 @@ function applyFilters() {
 
 // Eventos
 searchInput.addEventListener("input", applyFilters);
+editionFilter.addEventListener("change", applyFilters); // <--- Evento agregado
 typeFilter.addEventListener("change", applyFilters);
 costFilter.addEventListener("change", applyFilters);
