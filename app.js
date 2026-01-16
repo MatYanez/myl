@@ -1,139 +1,3 @@
-// Referencias DOM
-const cardsContainer = document.getElementById("cardsContainer");
-const deckList = document.getElementById("deckList");
-const searchInput = document.getElementById("searchInput");
-const editionFilter = document.getElementById("editionFilter");
-const typeFilter = document.getElementById("typeFilter");
-const costFilter = document.getElementById("costFilter");
-
-// Estado
-let allCards = [];
-let currentDeck = {}; // { "id_carta": cantidad }
-const MAX_COPIES = 3;
-
-// 1. CARGAR DATOS
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    // ASUMO QUE TU ARCHIVO SE LLAMA 'data.json' Y ESTÁ EN LA MISMA CARPETA
-    const response = await fetch("data.json");
-    if (!response.ok) throw new Error("No se pudo cargar el JSON");
-    
-    allCards = await response.json();
-    
-    // Llenar filtro de ediciones dinámicamente
-    populateEditions();
-    
-    // Render inicial
-    renderCards(allCards);
-    updateDeckView();
-  } catch (error) {
-    console.error(error);
-    cardsContainer.innerHTML = `<p class="empty-msg">Error cargando cartas. Asegúrate de tener 'data.json'.</p>`;
-  }
-});
-
-// 2. RENDERIZAR CARTAS
-function renderCards(cards) {
-  cardsContainer.innerHTML = "";
-  
-  // Limite visual para rendimiento si son muchas (lazy loading casero)
-  const displayCards = cards.slice(0, 100); 
-
-  displayCards.forEach(card => {
-    const qty = currentDeck[card.id] || 0;
-    
-    const cardEl = document.createElement("div");
-    cardEl.className = "myl-card";
-    cardEl.onclick = () => addToDeck(card.id);
-    
-    cardEl.innerHTML = `
-      <img src="${card.imagen}" alt="${card.nombre}" loading="lazy">
-      ${qty > 0 ? `<div class="card-count-badge">${qty}</div>` : ''}
-      <div class="card-overlay">
-        <strong>${card.nombre}</strong><br>
-        <small>${card.tipo} - ${card.coste !== null ? card.coste : '-'}</small>
-      </div>
-    `;
-    cardsContainer.appendChild(cardEl);
-  });
-
-  if(cards.length === 0) {
-    cardsContainer.innerHTML = `<p class="empty-msg">No se encontraron cartas.</p>`;
-  }
-}
-
-// 3. FILTROS
-function filterCards() {
-  const text = searchInput.value.toLowerCase();
-  const edition = editionFilter.value;
-  const type = typeFilter.value;
-  const cost = costFilter.value;
-
-  const filtered = allCards.filter(card => {
-    // Filtro Texto
-    const matchText = card.nombre.toLowerCase().includes(text) || 
-                      (card.habilidad && card.habilidad.toLowerCase().includes(text));
-    
-    // Filtro Edición
-    const matchEdition = edition === "all" || card.edicion === edition;
-
-    // Filtro Tipo
-    const matchType = type === "all" || card.tipo === type;
-
-    // Filtro Coste
-    let matchCost = true;
-    if (cost !== "all") {
-      if (cost === "4+") matchCost = card.coste >= 4;
-      else matchCost = card.coste == cost;
-    }
-
-    return matchText && matchEdition && matchType && matchCost;
-  });
-
-  renderCards(filtered);
-}
-
-// Event Listeners para filtros
-searchInput.addEventListener("input", filterCards);
-editionFilter.addEventListener("change", filterCards);
-typeFilter.addEventListener("change", filterCards);
-costFilter.addEventListener("change", filterCards);
-
-function populateEditions() {
-  const ediciones = [...new Set(allCards.map(c => c.edicion))];
-  ediciones.forEach(ed => {
-    const opt = document.createElement("option");
-    opt.value = ed;
-    opt.textContent = ed;
-    editionFilter.appendChild(opt);
-  });
-}
-
-// 4. LÓGICA DE MAZO
-function addToDeck(id) {
-  if (!currentDeck[id]) currentDeck[id] = 0;
-  
-  // Reglas básicas
-  if (currentDeck[id] >= MAX_COPIES) {
-    alert("Máximo 3 copias por carta.");
-    return;
-  }
-
-  currentDeck[id]++;
-  updateDeckView();
-  // Re-render solo la carta afectada sería mejor, pero por simpleza:
-  filterCards(); 
-}
-
-function removeFromDeck(id) {
-  if (currentDeck[id] > 0) {
-    currentDeck[id]--;
-    if (currentDeck[id] === 0) delete currentDeck[id];
-    updateDeckView();
-    filterCards();
-  }
-}
-
 function updateDeckView() {
   deckList.innerHTML = "";
   let totalCards = 0;
@@ -143,16 +7,32 @@ function updateDeckView() {
   
   if (ids.length === 0) {
     deckList.innerHTML = `<p class="empty-msg">Tu mazo está vacío.</p>`;
+    // Reseteamos contadores visuales
+    document.getElementById("cardCount").textContent = "0/50";
+    document.getElementById("oroCount").textContent = "0";
+    document.getElementById("aliadoCount").textContent = "0";
+    document.getElementById("otroCount").textContent = "0";
+    return;
   }
 
   ids.forEach(id => {
-    const card = allCards.find(c => c.id == id);
+    // CORRECCIÓN 1: Convertimos ambos a String para asegurar la comparación (evita error número vs texto)
+    const card = allCards.find(c => String(c.id) === String(id));
+    
+    // CORRECCIÓN 2: Seguridad. Si por alguna razón no encuentra la carta, la saltamos para no romper la web.
+    if (!card) {
+      console.warn("Carta no encontrada en la base de datos con ID:", id);
+      return; 
+    }
+
     const qty = currentDeck[id];
     totalCards += qty;
 
-    // Stats
-    if (card.tipo === "Oro") stats.Oro += qty;
-    else if (card.tipo === "Aliado") stats.Aliado += qty;
+    // Stats (Usamos toLowerCase para evitar errores si dice "aliado" o "Aliado")
+    const tipoNormalizado = (card.tipo || "").toLowerCase(); // Previene error si tipo no existe
+    
+    if (tipoNormalizado === "oro") stats.Oro += qty;
+    else if (tipoNormalizado === "aliado") stats.Aliado += qty;
     else stats.Otros += qty;
 
     const item = document.createElement("div");
@@ -176,29 +56,3 @@ function updateDeckView() {
   document.getElementById("aliadoCount").textContent = stats.Aliado;
   document.getElementById("otroCount").textContent = stats.Otros;
 }
-
-function limpiarMazo() {
-  if(confirm("¿Borrar todo el mazo?")) {
-    currentDeck = {};
-    updateDeckView();
-    filterCards();
-  }
-}
-
-function exportarMazo() {
-  let texto = "Mi Mazo MyL:\n";
-  Object.keys(currentDeck).forEach(id => {
-    const card = allCards.find(c => c.id == id);
-    texto += `${currentDeck[id]}x ${card.nombre}\n`;
-  });
-  navigator.clipboard.writeText(texto).then(() => alert("Lista copiada al portapapeles!"));
-}
-
-// UI Mobile
-const deckSidebar = document.getElementById("deckSidebar");
-document.getElementById("openDeckBtn").addEventListener("click", () => {
-  deckSidebar.classList.add("open");
-});
-document.getElementById("toggleDeckBtn").addEventListener("click", () => {
-  deckSidebar.classList.remove("open");
-});
