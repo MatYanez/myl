@@ -140,7 +140,7 @@ select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
 @media (max-width: 700px) {
   /* Modal móvil */
   .modal-body { flex-direction: column; padding: 20px; align-items: center; }
-  .modal-image-container { flex: 0 0 auto; width: 220px; }
+  .modal-image-container { flex: 0 0 auto; }
   .modal-details { width: 100%; text-align: center; }
   .badge-type { align-self: center; }
   .modal-info-grid { text-align: left; }
