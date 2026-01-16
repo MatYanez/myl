@@ -74,3 +74,57 @@ select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
   .cards-grid { gap: 8px; } /* Menos hueco entre cartas */
   .edition-title { font-size: 1.1rem; margin-bottom: 10px; }
 }
+
+
+/* === GRILLA DE CARTAS === */
+.cards-grid {
+  display: grid;
+  gap: 14px; /* Espacio entre cartas */
+  
+  /* 🖥️ PC: Forzamos 7 cartas por fila */
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.myl-card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+  aspect-ratio: 63/88; /* Mantiene la proporción MyL perfecta */
+  background: #e0e0e0;
+}
+
+.myl-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* === RESPONSIVE === */
+
+/* 💻 TABLET / LAPTOP PEQUEÑA (Opcional para que no se vean diminutas) */
+@media (max-width: 1200px) {
+  .cards-grid {
+    grid-template-columns: repeat(5, 1fr); /* 5 en pantallas medianas */
+  }
+}
+
+@media (max-width: 900px) {
+  .cards-grid {
+    grid-template-columns: repeat(4, 1fr); /* 4 en tablets */
+  }
+}
+
+/* 📱 CELULAR (Lo que pediste: 2 por fila) */
+@media (max-width: 600px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 cartas exactas */
+    gap: 8px; /* Menos espacio entre cartas para aprovechar pantalla */
+  }
+  
+  .main-content {
+    padding: 10px; /* Menos padding en los bordes del celular */
+  }
+}
