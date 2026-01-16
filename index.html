@@ -24,7 +24,7 @@
         <div class="filters-scroll">
           <select id="editionFilter">
             <option value="all">Todas las Ediciones</option>
-            </select>
+          </select>
 
           <select id="typeFilter">
             <option value="all">Tipo</option>
@@ -50,6 +50,31 @@
     <main class="main-content" id="mainContainer">
       </main>
 
+  </div>
+
+  <div id="cardModal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" id="closeModalBtn">✕</button>
+      
+      <div class="modal-body">
+        <div class="modal-image-container">
+          <img id="modalImage" src="" alt="Carta">
+        </div>
+        
+        <div class="modal-details">
+          <h2 id="modalTitle">Nombre de la Carta</h2>
+          <span id="modalType" class="badge-type">Tipo</span>
+          
+          <div class="modal-info-grid">
+            <div><strong>Edición:</strong> <span id="modalEdition"></span></div>
+            <div><strong>Coste:</strong> <span id="modalCost"></span></div>
+            <div><strong>Fuerza:</strong> <span id="modalForce"></span></div>
+          </div>
+          
+          <p id="modalAbility" class="modal-ability">Habilidad...</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

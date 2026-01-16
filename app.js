@@ -1,9 +1,20 @@
-// Referencias
+// Referencias DOM
 const container = document.getElementById("mainContainer");
 const searchInput = document.getElementById("searchInput");
-const editionFilter = document.getElementById("editionFilter"); // <--- Nuevo
+const editionFilter = document.getElementById("editionFilter");
 const typeFilter = document.getElementById("typeFilter");
 const costFilter = document.getElementById("costFilter");
+
+// Referencias MODAL
+const modal = document.getElementById("cardModal");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const modalImage = document.getElementById("modalImage");
+const modalTitle = document.getElementById("modalTitle");
+const modalType = document.getElementById("modalType");
+const modalEdition = document.getElementById("modalEdition");
+const modalCost = document.getElementById("modalCost");
+const modalForce = document.getElementById("modalForce");
+const modalAbility = document.getElementById("modalAbility");
 
 let allCards = [];
 
@@ -18,12 +29,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // PROCESAR DATA (Detectar Edición por URL)
     allCards = rawData.map((card, index) => {
       let edicion = "Otras";
-      
       if (card.imagen) {
-        // Regex para sacar la carpeta de la URL
         const match = card.imagen.match(/PRIMER_BLOQUE\/([^\/]+)\//);
         if (match && match[1]) {
-          // Limpieza: "03-Helenica" -> "Helenica"
           edicion = match[1].replace(/^\d+[-_]/, "").replace(/[-_]/g, " ");
           edicion = capitalizar(edicion);
         }
@@ -36,10 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
     });
 
-    // Llenar el select de ediciones antes de renderizar
     populateEditions();
-    
-    // Render inicial
     renderGroupedCards(allCards);
 
   } catch (error) {
@@ -52,10 +57,8 @@ function capitalizar(str) {
   return str.replace(/\b\w/g, l => l.toUpperCase());
 }
 
-// 2. FUNCIÓN PARA LLENAR EL FILTRO DE EDICIONES
 function populateEditions() {
   const edicionesUnicas = [...new Set(allCards.map(c => c.edicionCalculada))].sort();
-  
   edicionesUnicas.forEach(ed => {
     const option = document.createElement("option");
     option.value = ed;
@@ -64,7 +67,7 @@ function populateEditions() {
   });
 }
 
-// 3. RENDERIZAR AGRUPADO
+// 2. RENDERIZAR AGRUPADO CON EVENTO CLICK
 function renderGroupedCards(cards) {
   container.innerHTML = "";
 
@@ -73,7 +76,6 @@ function renderGroupedCards(cards) {
     return;
   }
 
-  // Agrupar
   const grupos = {};
   cards.forEach(card => {
     const ed = card.edicionCalculada;
@@ -81,10 +83,8 @@ function renderGroupedCards(cards) {
     grupos[ed].push(card);
   });
 
-  // Ordenar grupos alfabéticamente
   const nombresEdiciones = Object.keys(grupos).sort();
 
-  // Crear secciones
   nombresEdiciones.forEach(nombreEdicion => {
     const cartasGrupo = grupos[nombreEdicion];
 
@@ -104,8 +104,10 @@ function renderGroupedCards(cards) {
     cartasGrupo.forEach(card => {
       const cardDiv = document.createElement("div");
       cardDiv.className = "myl-card";
-      cardDiv.title = `${card.nombre} (${card.tipo || 'Carta'})`;
       
+      // ✅ Al hacer clic, abrimos el modal
+      cardDiv.onclick = () => openModal(card);
+
       cardDiv.innerHTML = `
         <img src="${card.imagen}" loading="lazy" alt="${card.nombre}">
       `;
@@ -117,10 +119,49 @@ function renderGroupedCards(cards) {
   });
 }
 
-// 4. FILTROS (Ahora incluye Edición)
+// 3. FUNCIONES DEL MODAL
+function openModal(card) {
+  // Llenar datos
+  modalImage.src = card.imagen;
+  modalTitle.textContent = card.nombre;
+  modalType.textContent = card.tipo || "Carta";
+  modalEdition.textContent = card.edicionCalculada;
+  
+  // Manejo de valores nulos o vacíos
+  modalCost.textContent = (card.coste !== undefined && card.coste !== null) ? card.coste : "-";
+  modalForce.textContent = (card.fuerza !== undefined && card.fuerza !== null) ? card.fuerza : "-";
+  modalAbility.textContent = card.habilidad ? card.habilidad : "Sin habilidad.";
+
+  // Mostrar modal
+  modal.classList.add("active");
+}
+
+function closeModal() {
+  modal.classList.remove("active");
+  setTimeout(() => { modalImage.src = ""; }, 200); // Limpiar imagen al cerrar
+}
+
+// Eventos para cerrar modal
+closeModalBtn.addEventListener("click", closeModal);
+
+// Cerrar si se hace clic fuera del contenido (en el fondo oscuro)
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    closeModal();
+  }
+});
+
+// Cerrar con tecla Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && modal.classList.contains("active")) {
+    closeModal();
+  }
+});
+
+// 4. FILTROS
 function applyFilters() {
   const text = searchInput.value.toLowerCase();
-  const edition = editionFilter.value; // <--- Leemos el valor
+  const edition = editionFilter.value;
   const type = typeFilter.value;
   const cost = costFilter.value;
 
@@ -129,16 +170,10 @@ function applyFilters() {
     const habilidad = (card.habilidad || "").toLowerCase();
     const tipoCarta = (card.tipo || "").toLowerCase();
     
-    // Filtro Texto
     const matchText = nombre.includes(text) || habilidad.includes(text);
-    
-    // Filtro Edición (NUEVO)
     const matchEdition = edition === "all" || card.edicionCalculada === edition;
-
-    // Filtro Tipo
     const matchType = type === "all" || tipoCarta.includes(type.toLowerCase());
     
-    // Filtro Coste
     let matchCost = true;
     const coste = card.coste !== undefined ? card.coste : -1;
     if (cost !== "all") {
@@ -152,8 +187,7 @@ function applyFilters() {
   renderGroupedCards(filtered);
 }
 
-// Eventos
 searchInput.addEventListener("input", applyFilters);
-editionFilter.addEventListener("change", applyFilters); // <--- Evento agregado
+editionFilter.addEventListener("change", applyFilters);
 typeFilter.addEventListener("change", applyFilters);
 costFilter.addEventListener("change", applyFilters);
