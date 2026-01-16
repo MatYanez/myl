@@ -1,148 +1,139 @@
-// Referencias DOM
-const cardsContainer = document.getElementById("cardsContainer");
+// Referencias
+const container = document.getElementById("mainContainer"); // Ojo: Cambié el ID en HTML a mainContainer
 const searchInput = document.getElementById("searchInput");
-const editionFilter = document.getElementById("editionFilter");
 const typeFilter = document.getElementById("typeFilter");
 const costFilter = document.getElementById("costFilter");
 
-// Estado
 let allCards = [];
 
 // 1. CARGAR DATOS
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     const response = await fetch("data.json");
-    if (!response.ok) throw new Error("No se pudo cargar data.json");
+    if (!response.ok) throw new Error("Error cargando data.json");
     
     let rawData = await response.json();
 
-    // PROCESAMIENTO DE DATA
+    // PROCESAR DATA (Detectar Edición por URL)
     allCards = rawData.map((card, index) => {
-      // 1. Generar ID si falta
-      const id = (card.id !== undefined && card.id !== null) ? card.id : index;
+      let edicion = "Otras";
       
-      // 2. Extraer Edición desde la URL
-      let edicionDetectada = "Desconocida";
-      
+      // Lógica de extracción de carpeta
       if (card.imagen) {
-        // Buscamos lo que está después de "PRIMER_BLOQUE/"
-        // Regex captura: .../PRIMER_BLOQUE/ (GRUPO 1: Carpeta) / ...
+        // Busca texto entre "PRIMER_BLOQUE/" y el siguiente "/"
         const match = card.imagen.match(/PRIMER_BLOQUE\/([^\/]+)\//);
-        
         if (match && match[1]) {
-          let folderName = match[1]; 
-          // Ejemplo: "03-Helenica" o "07-Dominios-de-RA"
-          
-          // Quitamos números iniciales seguidos de guion (ej: "03-")
-          folderName = folderName.replace(/^\d+[-_]/, ""); 
-          
-          // Reemplazamos guiones y guiones bajos por espacios
-          folderName = folderName.replace(/[-_]/g, " ");
-          
-          // Convertimos "RA" a "Ra" por estética (opcional, capitalizar palabras)
-          edicionDetectada = capitalizar(folderName);
+          // Limpieza: "03-Helenica" -> "Helenica"
+          edicion = match[1].replace(/^\d+[-_]/, "").replace(/[-_]/g, " ");
+          edicion = capitalizar(edicion);
         }
       }
 
       return {
         ...card,
-        id: id,
-        edicionCalculada: edicionDetectada // Guardamos la edición limpia aquí
+        id: (card.id !== undefined) ? card.id : index,
+        edicionCalculada: edicion
       };
     });
-    
-    populateEditions();
-    renderCards(allCards);
-    
+
+    renderGroupedCards(allCards);
+
   } catch (error) {
     console.error(error);
-    cardsContainer.innerHTML = `<p style="text-align:center; padding:20px;">Error cargando datos: ${error.message}</p>`;
+    container.innerHTML = `<p class="empty-msg">Error: ${error.message}</p>`;
   }
 });
 
-// Función auxiliar para títulos (ej: "dominios de ra" -> "Dominios De Ra")
 function capitalizar(str) {
   return str.replace(/\b\w/g, l => l.toUpperCase());
 }
 
-// 2. RENDERIZAR
-function renderCards(cards) {
-  cardsContainer.innerHTML = "";
-  // Lazy render simple: limitamos a 200 para no saturar si hay miles
-  const displayCards = cards.slice(0, 200); 
+// 2. RENDERIZAR AGRUPADO
+function renderGroupedCards(cards) {
+  container.innerHTML = "";
 
-  displayCards.forEach(card => {
-    const cardEl = document.createElement("div");
-    cardEl.className = "myl-card";
-    
-    // Título hover con datos
-    cardEl.title = `${card.nombre} \nEdición: ${card.edicionCalculada}`;
+  if (cards.length === 0) {
+    container.innerHTML = `<p class="empty-msg">No se encontraron cartas.</p>`;
+    return;
+  }
 
-    cardEl.innerHTML = `
-      <img src="${card.imagen}" alt="${card.nombre}" loading="lazy">
-      <div class="card-info-overlay">
-        <strong>${card.edicionCalculada}</strong>
-      </div>
-    `;
-    cardsContainer.appendChild(cardEl);
+  // A. Agrupar cartas por edición
+  const grupos = {};
+  cards.forEach(card => {
+    const ed = card.edicionCalculada;
+    if (!grupos[ed]) grupos[ed] = [];
+    grupos[ed].push(card);
   });
 
-  if(cards.length === 0) {
-    cardsContainer.innerHTML = `<p style="text-align:center; width:100%; color:#888;">No se encontraron cartas.</p>`;
-  }
+  // B. Ordenar nombres de ediciones (opcional)
+  const nombresEdiciones = Object.keys(grupos).sort();
+
+  // C. Crear secciones HTML
+  nombresEdiciones.forEach(nombreEdicion => {
+    const cartasGrupo = grupos[nombreEdicion];
+
+    // Contenedor de la Sección
+    const section = document.createElement("section");
+    section.className = "edition-section";
+
+    // Título de la Edición
+    section.innerHTML = `
+      <div class="edition-title">
+        ${nombreEdicion}
+        <span class="edition-count">${cartasGrupo.length}</span>
+      </div>
+    `;
+
+    // Grilla de cartas
+    const grid = document.createElement("div");
+    grid.className = "cards-grid";
+
+    cartasGrupo.forEach(card => {
+      const cardDiv = document.createElement("div");
+      cardDiv.className = "myl-card";
+      cardDiv.title = `${card.nombre} (${card.tipo || 'Carta'})`;
+      
+      cardDiv.innerHTML = `
+        <img src="${card.imagen}" loading="lazy" alt="${card.nombre}">
+      `;
+      grid.appendChild(cardDiv);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
 }
 
 // 3. FILTROS
-function filterCards() {
+function applyFilters() {
   const text = searchInput.value.toLowerCase();
-  const edition = editionFilter.value;
   const type = typeFilter.value;
   const cost = costFilter.value;
 
   const filtered = allCards.filter(card => {
     const nombre = (card.nombre || "").toLowerCase();
     const habilidad = (card.habilidad || "").toLowerCase();
-    const tipoCarta = (card.tipo || ""); // Sin lowerCase aún para respetar mayúsculas si es necesario, o usar includes
+    const tipoCarta = (card.tipo || "").toLowerCase();
     
-    // 1. Texto
+    // Filtro Texto
     const matchText = nombre.includes(text) || habilidad.includes(text);
-    
-    // 2. Edición (Usamos la calculada)
-    const matchEdition = edition === "all" || card.edicionCalculada === edition;
-
-    // 3. Tipo (Flexible con emojis)
-    const matchType = type === "all" || tipoCarta.toLowerCase().includes(type.toLowerCase());
-
-    // 4. Coste
+    // Filtro Tipo
+    const matchType = type === "all" || tipoCarta.includes(type.toLowerCase());
+    // Filtro Coste
     let matchCost = true;
-    const costeReal = card.coste !== undefined ? card.coste : -1;
+    const coste = card.coste !== undefined ? card.coste : -1;
     if (cost !== "all") {
-      if (cost === "4+") matchCost = costeReal >= 4;
-      else matchCost = costeReal == cost;
+      if (cost === "4+") matchCost = coste >= 4;
+      else matchCost = coste == cost;
     }
 
-    return matchText && matchEdition && matchType && matchCost;
+    return matchText && matchType && matchCost;
   });
 
-  renderCards(filtered);
+  renderGroupedCards(filtered);
 }
 
 // Eventos
-searchInput.addEventListener("input", filterCards);
-editionFilter.addEventListener("change", filterCards);
-typeFilter.addEventListener("change", filterCards);
-costFilter.addEventListener("change", filterCards);
-
-// Llenar select de Ediciones
-function populateEditions() {
-  // Obtenemos ediciones únicas del campo calculado
-  const ediciones = [...new Set(allCards.map(c => c.edicionCalculada))].sort();
-  
-  ediciones.forEach(ed => {
-    if (ed === "Desconocida") return; // Opcional: Ocultar desconocidas
-    const opt = document.createElement("option");
-    opt.value = ed;
-    opt.textContent = ed;
-    editionFilter.appendChild(opt);
-  });
-}
+searchInput.addEventListener("input", applyFilters);
+typeFilter.addEventListener("change", applyFilters);
+costFilter.addEventListener("change", applyFilters);
