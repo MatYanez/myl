@@ -3,36 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Galería MyL | Primer Bloque</title>
+  <title>Colección MyL | Primer Bloque</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <div class="app-container">
     
-    <main class="main-content">
-      
-      <header class="top-bar">
-        <div class="logo-area">
-          <h1>MyL <span>Primer Bloque</span></h1>
-        </div>
+    <header class="top-bar">
+      <div class="logo-area">
+        <h1>MyL <span>Primer Bloque</span></h1>
+      </div>
 
+      <div class="controls-row">
         <div class="search-bar">
-          <input type="text" id="searchInput" placeholder="Buscar carta por nombre o habilidad...">
+          <input type="text" id="searchInput" placeholder="Buscar carta...">
         </div>
-
+        
         <div class="filters-scroll">
-          <select id="editionFilter">
-            <option value="all">Todas las Ediciones</option>
-            </select>
           <select id="typeFilter">
-            <option value="all">Todos los Tipos</option>
-            <option value="Aliado">Aliado</option>
-            <option value="Talismán">Talismán</option>
-            <option value="Tótem">Tótem</option>
-            <option value="Arma">Arma</option>
-            <option value="Oro">Oro</option>
+            <option value="all">Tipo</option>
+            <option value="Aliado">Aliados</option>
+            <option value="Talismán">Talismanes</option>
+            <option value="Tótem">Totems</option>
+            <option value="Arma">Armas</option>
+            <option value="Oro">Oros</option>
           </select>
           <select id="costFilter">
             <option value="all">Coste</option>
@@ -43,12 +39,12 @@
             <option value="4+">4+</option>
           </select>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <section class="cards-grid" id="cardsContainer">
-        </section>
+    <main class="main-content" id="mainContainer">
+      </main>
 
-    </main>
   </div>
 
   <script src="app.js"></script>
